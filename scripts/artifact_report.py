@@ -11,25 +11,12 @@ def _normalize_cell_value(value):
     return '' if value in [None, 'N/A'] else str(value)
 
 
-_TABLE_CELL_STYLE = (
-    'max-width: 44rem; '
-    'white-space: pre-wrap; '
-    'overflow-wrap: anywhere; '
-    'word-break: break-word;'
-)
-_EXPANDED_CONTENT_STYLE = (
-    'margin-top: 0.4rem; '
-    'max-height: 18rem; '
-    'overflow: auto; '
-    'white-space: pre-wrap; '
-    'overflow-wrap: anywhere; '
-    'word-break: break-word;'
-)
-_SUMMARY_STYLE = (
-    'cursor: pointer; '
-    'white-space: normal; '
-    'overflow-wrap: anywhere; '
-    'word-break: break-word;'
+_TABLE_CELL_STYLE_BLOCK = (
+    '<style>'
+    '.leapp-cell-wrap{max-width:44rem;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;}'
+    '.leapp-cell-expanded{margin-top:.4rem;max-height:18rem;overflow:auto;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;}'
+    '.leapp-cell-summary{cursor:pointer;white-space:normal;overflow-wrap:anywhere;word-break:break-word;}'
+    '</style>'
 )
 _CELL_EXPAND_THRESHOLD = 512
 _CELL_PREVIEW_CHARS = 240
@@ -39,16 +26,16 @@ def _format_text_table_cell(value):
     raw_text = _normalize_cell_value(value)
     safe_full_text = escape_text(raw_text)
     if len(raw_text) <= _CELL_EXPAND_THRESHOLD:
-        return f'<td style="{_TABLE_CELL_STYLE}">{safe_full_text}</td>'
+        return f'<td class="leapp-cell-wrap">{safe_full_text}</td>'
 
-    safe_preview = escape_text(raw_text[:_CELL_PREVIEW_CHARS])
     hidden_chars = len(raw_text) - _CELL_PREVIEW_CHARS
     return (
-        f'<td style="{_TABLE_CELL_STYLE}">'
+        f'<td class="leapp-cell-wrap">'
         f'<details>'
-        f'<summary style="{_SUMMARY_STYLE}">{safe_preview} '
-        f'<span class="text-muted">... ({hidden_chars} more chars)</span></summary>'
-        f'<div style="{_EXPANDED_CONTENT_STYLE}">{safe_full_text}</div>'
+        f'<summary class="leapp-cell-summary">'
+        f'Long value ({len(raw_text)} chars)'
+        f'<span class="text-muted"> - {hidden_chars} chars hidden in collapsed mode</span></summary>'
+        f'<div class="leapp-cell-expanded">{safe_full_text}</div>'
         f'</details>'
         f'</td>'
     )
@@ -68,6 +55,7 @@ class ArtifactHtmlReport:
         self.script_code = ''
         self.artifact_name = artifact_name
         self.artifact_category = artifact_category # unused
+        self._table_cell_styles_written = False
 
     def __del__(self):
         if self.report_file:
@@ -93,6 +81,12 @@ class ArtifactHtmlReport:
             self.script_code += script + nav_bar_script_footer
         else:
             self.script_code += default_responsive_table_script + nav_bar_script_footer
+
+    def _ensure_table_cell_styles(self):
+        if self._table_cell_styles_written:
+            return
+        self.report_file.write(_TABLE_CELL_STYLE_BLOCK)
+        self._table_cell_styles_written = True
 
     def write_artifact_data_table(
         self,
@@ -146,6 +140,7 @@ class ArtifactHtmlReport:
                 source_path = source_path[4:]
             self.write_lead_text(f'{self.artifact_name} located at: {source_path}')
 
+        self._ensure_table_cell_styles()
         self.report_file.write('<br />')
 
         if table_responsive:
