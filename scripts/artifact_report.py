@@ -6,6 +6,54 @@ from scripts.html_security import TrustedHtml, escape_text, sanitize_html_fragme
 #from scripts.ilapfuncs import is_platform_windows
 from scripts.version_info import ileapp_version
 
+
+def _normalize_cell_value(value):
+    return '' if value in [None, 'N/A'] else str(value)
+
+
+_TABLE_CELL_STYLE = (
+    'max-width: 44rem; '
+    'white-space: pre-wrap; '
+    'overflow-wrap: anywhere; '
+    'word-break: break-word;'
+)
+_EXPANDED_CONTENT_STYLE = (
+    'margin-top: 0.4rem; '
+    'max-height: 18rem; '
+    'overflow: auto; '
+    'white-space: pre-wrap; '
+    'overflow-wrap: anywhere; '
+    'word-break: break-word;'
+)
+_SUMMARY_STYLE = (
+    'cursor: pointer; '
+    'white-space: normal; '
+    'overflow-wrap: anywhere; '
+    'word-break: break-word;'
+)
+_CELL_EXPAND_THRESHOLD = 512
+_CELL_PREVIEW_CHARS = 240
+
+
+def _format_text_table_cell(value):
+    raw_text = _normalize_cell_value(value)
+    safe_full_text = escape_text(raw_text)
+    if len(raw_text) <= _CELL_EXPAND_THRESHOLD:
+        return f'<td style="{_TABLE_CELL_STYLE}">{safe_full_text}</td>'
+
+    safe_preview = escape_text(raw_text[:_CELL_PREVIEW_CHARS])
+    hidden_chars = len(raw_text) - _CELL_PREVIEW_CHARS
+    return (
+        f'<td style="{_TABLE_CELL_STYLE}">'
+        f'<details>'
+        f'<summary style="{_SUMMARY_STYLE}">{safe_preview} '
+        f'<span class="text-muted">... ({hidden_chars} more chars)</span></summary>'
+        f'<div style="{_EXPANDED_CONTENT_STYLE}">{safe_full_text}</div>'
+        f'</details>'
+        f'</td>'
+    )
+
+
 class ArtifactHtmlReport:
 
     def __init__(self, artifact_name, artifact_category=''):
@@ -109,13 +157,20 @@ class ArtifactHtmlReport:
         if html_escape:
             for row in data_list:
                 if html_no_escape:
-                    self.report_file.write('<tr>' + ''.join(('<td>{}</td>'.format(html.escape(
-                        str(x) if x not in [None, 'N/A'] else '')) if h not in html_no_escape else '<td>{}</td>'.format(
-                        sanitize_html_fragment(str(x) if x not in [None, 'N/A'] else '')) for x, h in zip(row, data_headers))) + '</tr>')
+                    self.report_file.write(
+                        '<tr>' + ''.join(
+                            (
+                                _format_text_table_cell(x)
+                                if h not in html_no_escape
+                                else '<td>{}</td>'.format(sanitize_html_fragment(_normalize_cell_value(x)))
+                                for x, h in zip(row, data_headers)
+                            )
+                        ) + '</tr>'
+                    )
                 else:
-                    self.report_file.write('<tr>' + ''.join(
-                        ('<td>{}</td>'.format(html.escape(str(x) if x not in [None, 'N/A'] else '')) for x in
-                         row)) + '</tr>')
+                    self.report_file.write(
+                        '<tr>' + ''.join((_format_text_table_cell(x) for x in row)) + '</tr>'
+                    )
         else:
             for row in data_list:
                 self.report_file.write(
