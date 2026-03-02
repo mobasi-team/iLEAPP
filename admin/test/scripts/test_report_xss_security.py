@@ -116,13 +116,17 @@ class TestReportXssSecurity(unittest.TestCase):
         self.assertNotIn("javascript:", html.lower())
         self.assertIn('href="#"', html)
 
-    def test_write_raw_html_accepts_only_trusted_html(self):
+    def test_write_raw_html_sanitizes_untrusted_and_accepts_trusted(self):
         report_obj = ArtifactHtmlReport("XSS")
         report_obj.start_artifact_report(self.temp_dir, "raw")
-        with self.assertRaises(TypeError):
-            report_obj.write_raw_html("<b>unsafe</b>")
+        report_obj.write_raw_html('<img src=x onerror="alert(1)"><b>unsafe</b>')
         report_obj.write_raw_html(trust_html("<b>safe</b>"))
         report_obj.end_artifact_report()
+
+        html = self._read_file(os.path.join(self.temp_dir, "raw.temphtml"))
+        self.assertNotIn('onerror=', html.lower())
+        self.assertIn("<b>unsafe</b>", html)
+        self.assertIn("<b>safe</b>", html)
 
     def test_logfunc_escapes_dynamic_values(self):
         log_path = os.path.join(self.temp_dir, "screen_output.html")

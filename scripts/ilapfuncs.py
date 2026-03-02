@@ -959,7 +959,7 @@ def media_to_html(media_path, files_found, report_folder):
         if mimetype == None:
             mimetype = ''
 
-        safe_source = escape_attr(sanitize_url(source))
+        safe_source = escape_attr(sanitize_url(source, allow_file=True))
         safe_filename = escape_text(filename)
 
         if 'video' in mimetype:

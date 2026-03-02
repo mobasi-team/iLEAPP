@@ -21,12 +21,17 @@ def _decode_decrypted_message(value):
     if value is None:
         return ''
     if isinstance(value, bytes):
-        return value.decode('utf8', errors='ignore')
-    return str(value).encode('cp1252', errors='ignore').decode('utf8', errors='ignore')
+        for encoding in ('utf8', 'utf-16', 'utf-16le', 'utf-16be', 'cp1252', 'latin-1'):
+            try:
+                return value.decode(encoding)
+            except UnicodeDecodeError:
+                continue
+        return value.decode('utf8', errors='replace')
+    return str(value)
 
 
 def _build_attachment_html(attachment_path, mimetype):
-    safe_path = escape_attr(sanitize_url(attachment_path))
+    safe_path = escape_attr(sanitize_url(attachment_path, allow_file=True))
     mime_text = str(mimetype or '')
     safe_mime_text = escape_text(mime_text)
     mime_lower = mime_text.lower()

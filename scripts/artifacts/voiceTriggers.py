@@ -16,7 +16,7 @@ def format_time(date_time_str):
 
 
 def _build_audio_file_html(audio_path):
-    safe_src = escape_attr(sanitize_url(audio_path))
+    safe_src = escape_attr(sanitize_url(audio_path, allow_file=True))
     return (
         "<audio controls>"
         f'<source src="{safe_src}" type="audio/wav">'

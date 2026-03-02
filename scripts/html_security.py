@@ -1,9 +1,16 @@
 import html
 import re
 from dataclasses import dataclass
+from functools import lru_cache
 from urllib.parse import urlsplit
 
-from bs4 import BeautifulSoup, Comment
+try:
+    from bs4 import BeautifulSoup, Comment
+    _HAS_BS4 = True
+except ImportError:  # pragma: no cover - fallback path
+    BeautifulSoup = None
+    Comment = ()
+    _HAS_BS4 = False
 
 
 DEFAULT_ALLOWED_TAGS = {
@@ -86,6 +93,8 @@ _DATA_MEDIA_PATTERN = re.compile(
     r'^data:(image|audio|video)/[a-z0-9.+-]+;base64,[a-z0-9+/=\s]+$',
     re.IGNORECASE,
 )
+_WINDOWS_ABS_PATH_PATTERN = re.compile(r'^[a-zA-Z]:[\\/].*')
+_UNC_PATH_PATTERN = re.compile(r'^[\\/]{2}[^\\/]+[\\/].*')
 
 
 @dataclass(frozen=True)
@@ -120,7 +129,7 @@ def sanitize_style(value):
     return cleaned
 
 
-def sanitize_url(value, allow_data_media=False):
+def sanitize_url(value, allow_data_media=False, allow_file=False, allow_ftp=False):
     if value is None:
         return '#'
 
@@ -139,23 +148,47 @@ def sanitize_url(value, allow_data_media=False):
             return normalized
         return '#'
 
+    if _WINDOWS_ABS_PATH_PATTERN.match(normalized) or _UNC_PATH_PATTERN.match(normalized):
+        return normalized if allow_file else '#'
+
+    if normalized.startswith('/') or normalized.startswith('\\'):
+        return normalized if allow_file else '#'
+
     split = urlsplit(normalized)
     scheme = split.scheme.lower()
-    if scheme in ('', 'http', 'https', 'mailto', 'tel', 'ftp', 'file'):
+    allowed_schemes = {'', 'http', 'https', 'mailto', 'tel'}
+    if allow_file:
+        allowed_schemes.add('file')
+    if allow_ftp:
+        allowed_schemes.add('ftp')
+
+    if scheme in allowed_schemes:
         return normalized
     return '#'
 
 
-def sanitize_html_fragment(value, allowed_tags=None):
-    if value is None:
+def _normalize_allowed_tags(allowed_tags):
+    source = allowed_tags if allowed_tags else DEFAULT_ALLOWED_TAGS
+    return tuple(sorted({str(tag).lower() for tag in source if tag}))
+
+
+@lru_cache(maxsize=8192)
+def _sanitize_html_fragment_cached(text, allowed_tags_key):
+    if not text:
         return ''
 
-    allowed = set(allowed_tags) if allowed_tags else set(DEFAULT_ALLOWED_TAGS)
-    allowed = {tag.lower() for tag in allowed}
+    # Fast path: plain text doesn't need an HTML parser.
+    if '<' not in text:
+        return escape_text(text)
 
-    soup = BeautifulSoup(str(value), 'html.parser')
+    if not _HAS_BS4:
+        # Conservative fallback when bs4 isn't available.
+        return escape_text(text)
 
-    for comment in soup.find_all(string=lambda text: isinstance(text, Comment)):
+    allowed = set(allowed_tags_key)
+    soup = BeautifulSoup(text, 'html.parser')
+
+    for comment in soup.find_all(string=lambda node: isinstance(node, Comment)):
         comment.extract()
 
     for tag in soup.find_all(True):
@@ -194,3 +227,12 @@ def sanitize_html_fragment(value, allowed_tags=None):
         tag.attrs = new_attrs
 
     return ''.join(str(item) for item in soup.contents)
+
+
+def sanitize_html_fragment(value, allowed_tags=None):
+    if value is None:
+        return ''
+
+    text = str(value)
+    allowed_tags_key = _normalize_allowed_tags(allowed_tags)
+    return _sanitize_html_fragment_cached(text, allowed_tags_key)

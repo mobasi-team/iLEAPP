@@ -237,7 +237,7 @@ def integrateAtt(rec):
         att_type = rec["content-type"].split('/')[0] if rec["content-type"] else 'application'
         filename = os.path.basename(rec["file-path"])
         body = escape_text(rec["message"] if rec["message"] else '')
-        safe_path = escape_attr(sanitize_url(rec["file-path"]))
+        safe_path = escape_attr(sanitize_url(rec["file-path"], allow_file=True))
         safe_content_type = escape_attr(rec["content-type"]) if rec["content-type"] else ""
         safe_filename = escape_text(filename)
         if att_type == 'image':               
@@ -289,7 +289,6 @@ def render_chat(df):
 
     json_chat = json.dumps(chats)
     return render_js_chat(json_chat)
-
 
 
 

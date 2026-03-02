@@ -3,21 +3,59 @@
 import os
 import shutil
 import xml.etree.ElementTree as ET
+import hashlib
+from urllib.parse import quote
 
 from scripts.artifact_report import ArtifactHtmlReport
 from scripts.html_security import escape_attr, sanitize_url
 from scripts.ilapfuncs import logfunc, tsv
 
 
-def _build_pending_file_thumb(report_folder, content_id):
-    content_basename = os.path.basename(str(content_id) if content_id else '')
-    if not content_basename:
+def _find_pending_media_file(files_found, content_id):
+    normalized_content = str(content_id or '').replace('\\', '/').lstrip('/')
+    if not normalized_content:
+        return None
+
+    basename = os.path.basename(normalized_content)
+    strong_match = None
+    weak_matches = []
+    for candidate in files_found:
+        candidate_path = str(candidate).replace('\\', '/')
+        if '/data_cache/' not in candidate_path:
+            continue
+        if candidate_path.endswith('/' + normalized_content):
+            strong_match = candidate
+            break
+        if os.path.basename(candidate_path) == basename:
+            weak_matches.append(candidate)
+
+    if strong_match:
+        return strong_match
+    if weak_matches:
+        return sorted(weak_matches)[0]
+    return None
+
+
+def _copy_pending_media_file(source_path, report_folder):
+    basename = os.path.basename(str(source_path))
+    digest = hashlib.sha1(str(source_path).encode('utf8', errors='ignore')).hexdigest()[:10]
+    copied_name = f'{digest}_{basename}'
+    destination_path = os.path.join(report_folder, copied_name)
+    if not os.path.exists(destination_path):
+        shutil.copy2(source_path, destination_path)
+    return copied_name
+
+
+def _build_pending_file_thumb(copied_name, content_id=None):
+    # Keep a 2-argument signature for compatibility with older tests/helpers.
+    if content_id is not None:
+        copied_name = content_id
+
+    if not copied_name:
         return ''
 
-    if sanitize_url(content_basename) == '#':
-        safe_src = '#'
-    else:
-        safe_src = sanitize_url(os.path.join(report_folder, content_basename))
+    normalized_src = sanitize_url(copied_name, allow_file=False)
+    safe_src = '#' if normalized_src == '#' else quote(normalized_src)
 
     return f'<img src="{escape_attr(safe_src)}" width="300"></img>'
 
@@ -62,28 +100,15 @@ def get_kikPendingUploads(files_found, report_folder, seeker, wrap_text, timezon
                 state = a_dict['state']
                 uploadStartTime = a_dict['uploadStartTime']
         
-        thumb = _build_pending_file_thumb(report_folder, contentID)
+        pending_media_file = _find_pending_media_file(files_found, contentID)
+        copied_name = _copy_pending_media_file(pending_media_file, report_folder) if pending_media_file else ''
+        thumb = _build_pending_file_thumb(copied_name)
         
         data_list.append((uploadStartTime, appID, contentID, progress, retriesRemaining, state, thumb))
 
         a_dict = {}
                         
         if len(data_list) > 0:
-            
-            content_basename = os.path.basename(contentID) if contentID else ''
-            for match in files_found:
-                if content_basename and os.path.basename(match) == content_basename:
-                    shutil.copy2(match, report_folder)
-            
-            # for x in len(data_list):
-                # for match in files_found:
-                    # if contentID in match:
-                        # shutil.copy2(match, report_folder)
-                        # data_file_name = os.path.basename(match)
-                        # thumb = f'<img src="{report_folder}{data_file_name}"  width="300"></img>'
-        
-            # data_list.append((uploadStartTime, appID, contentID, progress, retriesRemaining, state, thumb))
-        
             head_tail = os.path.split(file_found)
             description = 'Metadata from Kik media directory. Source are bplist files.'
             report = ArtifactHtmlReport('Kik Pending Uploads')

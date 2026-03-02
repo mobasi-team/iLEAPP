@@ -16,7 +16,7 @@ def unix_epoch_to_readable_date(unix_epoch_time):
 
 
 def _build_audio_file_html(audio_path):
-    safe_src = escape_attr(sanitize_url(audio_path))
+    safe_src = escape_attr(sanitize_url(audio_path, allow_file=True))
     return (
         "<audio controls>"
         f'<source src="{safe_src}" type="audio/wav">'

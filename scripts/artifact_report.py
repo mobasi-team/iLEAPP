@@ -54,6 +54,12 @@ def _format_text_table_cell(value):
     )
 
 
+def _format_html_no_escape_cell(value):
+    if isinstance(value, TrustedHtml):
+        return f'<td>{str(value)}</td>'
+    return f'<td>{sanitize_html_fragment(_normalize_cell_value(value))}</td>'
+
+
 class ArtifactHtmlReport:
 
     def __init__(self, artifact_name, artifact_category=''):
@@ -162,7 +168,7 @@ class ArtifactHtmlReport:
                             (
                                 _format_text_table_cell(x)
                                 if h not in html_no_escape
-                                else '<td>{}</td>'.format(sanitize_html_fragment(_normalize_cell_value(x)))
+                                else _format_html_no_escape_cell(x)
                                 for x, h in zip(row, data_headers)
                             )
                         ) + '</tr>'
@@ -212,9 +218,11 @@ class ArtifactHtmlReport:
         self.report_file.write(f'<p class="lead">{escape_text(text)}</p>')
 
     def write_raw_html(self, code):
-        if not isinstance(code, TrustedHtml):
-            raise TypeError('write_raw_html requires TrustedHtml')
-        self.report_file.write(str(code))
+        if isinstance(code, TrustedHtml):
+            self.report_file.write(str(code))
+            return
+        # Backward compatibility for custom artifacts still passing strings.
+        self.report_file.write(sanitize_html_fragment(str(code) if code is not None else ''))
 
     def end_artifact_report(self):
         if self.report_file:
