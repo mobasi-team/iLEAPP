@@ -1,7 +1,6 @@
 import os
 import plistlib
 import pgpy
-import html
 import json
 import ccl_bplist
 import sqlite3
@@ -14,7 +13,39 @@ from io import BytesIO
 from Crypto.Cipher import AES
 from pathlib import Path
 from scripts.artifact_report import ArtifactHtmlReport
+from scripts.html_security import escape_attr, escape_text, sanitize_url
 from scripts.ilapfuncs import logfunc, tsv, timeline, is_platform_windows, open_sqlite_db_readonly, media_to_html
+
+
+def _decode_decrypted_message(value):
+    if value is None:
+        return ''
+    if isinstance(value, bytes):
+        return value.decode('utf8', errors='ignore')
+    return str(value).encode('cp1252', errors='ignore').decode('utf8', errors='ignore')
+
+
+def _build_attachment_html(attachment_path, mimetype):
+    safe_path = escape_attr(sanitize_url(attachment_path))
+    mime_text = str(mimetype or '')
+    safe_mime_text = escape_text(mime_text)
+    mime_lower = mime_text.lower()
+
+    if 'video' in mime_lower:
+        mime_attr = escape_attr(mime_text or 'video/mp4')
+        return (
+            '<video width="320" height="240" controls="controls">'
+            f'<source src="{safe_path}" type="{mime_attr}">'
+            'Your browser does not support the video tag.'
+            '</video>'
+        )
+    if 'image' in mime_lower:
+        return f'<img src="{safe_path}" width="300"></img>'
+    return (
+        f'<a href="{safe_path}" target="_blank" rel="noopener noreferrer">'
+        f' Link to {safe_mime_text} </a>'
+    )
+
 
 def get_protonMail(files_found, report_folder, seeker, wrap_text, timezone_offset):
     data_list = []
@@ -98,15 +129,13 @@ def get_protonMail(files_found, report_folder, seeker, wrap_text, timezone_offse
     pwdKey = keychainStore['root']['NS.objects'][0]['AuthCredential.Password']
     
     def decrypt_message(encm):
-      if('-----BEGIN PGP MESSAGE-----') in encm:
+      if encm and ('-----BEGIN PGP MESSAGE-----') in str(encm):
         with key.unlock(pwdKey):
           assert key.is_unlocked
           message_from_blob = pgpy.PGPMessage.from_blob(encm)
           decm = key.decrypt(message_from_blob).message
-          #print(decm)
-          return html.unescape(decm.encode('cp1252', errors='ignore').decode('utf8', errors='ignore'))
-      else:
-        return encm
+          return _decode_decrypted_message(decm)
+      return _decode_decrypted_message(encm)
     
     def decrypt_attachment(proton_path, out_path, key, pwdKey, keyPacket, encfilename, decfilename):
       att = None
@@ -224,15 +253,9 @@ def get_protonMail(files_found, report_folder, seeker, wrap_text, timezone_offse
               proton_path = match.split('\\attachments')[0]
           
           attpath = decrypt_attachment(proton_path, out_path, key, pwdKey, row[14], encfilename, ZFILENAME)
-          
-          mimetype = guess_mime(attpath)
-          
-          if 'video' in mimetype:
-            attpath = f'<video width="320" height="240" controls="controls"><source src="{attpath}" type="video/mp4">Your browser does not support the video tag.</video>'
-          elif 'image' in mimetype:
-            attpath = f'<img src="{attpath}"width="300"></img>'
-          else:
-            attpath = f'<a href="{attpath}"> Link to {mimetype} </>'
+          if attpath:
+            mimetype = guess_mime(attpath) or ''
+            attpath = _build_attachment_html(attpath, mimetype)
         
         data_list.append((decryptedtime, sender_info, aggregatorto, aggregatorfor, title, decryptedbody, mime, isencrypted, ZFILESIZE, attpath, ZFILENAME, AMIMETYPE))
         
@@ -243,7 +266,7 @@ def get_protonMail(files_found, report_folder, seeker, wrap_text, timezone_offse
       report.start_artifact_report(report_folder, 'Proton Mail - Decrypted Emails')
       report.add_script()
       data_headers = ('Timestamp', 'Sender', 'To', 'Reply To', 'Title', 'Body', 'Mime', 'Is encrypted?', 'File Size','Attachment','Decrypted Attachment Filename', 'Type')
-      report.write_artifact_data_table(data_headers, data_list, file_found, html_no_escape=['Sender', 'To', 'Reply To', 'Body', 'File Name', 'Type','Attachment'])
+      report.write_artifact_data_table(data_headers, data_list, file_found, html_no_escape=['Body', 'Attachment'])
       report.end_artifact_report()
 
       tsvname = 'Proton Mail - Decrypted Emails'

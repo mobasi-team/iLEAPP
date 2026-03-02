@@ -311,7 +311,7 @@ def get_identity_services(file_found, identifiers, report_folder, timezone_offse
 
         #data_list.append(row)
 
-        report.write_artifact_data_table(data_headers, data_list, file_found, html_escape=False)
+        report.write_artifact_data_table(data_headers, data_list, file_found)
         report.end_artifact_report()
                 
         tsvname = f'Identity Lookup Service'

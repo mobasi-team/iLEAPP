@@ -22,8 +22,14 @@ from pathlib import Path
 from scripts.ccl_segb.ccl_segb import read_segb_file
 from scripts.ccl_segb.ccl_segb_common import EntryState
 from scripts.artifact_report import ArtifactHtmlReport
+from scripts.html_security import escape_text
 from scripts.ilapfuncs import webkit_timestampsconv, tsv, timeline, convert_utc_human_to_timezone, convert_time_obj_to_utc
 from scripts.lavafuncs import lava_process_artifact, lava_insert_sqlite_data
+
+
+def _format_note_html(message):
+    safe_text = escape_text(message)
+    return safe_text.replace('\r\n', '\n').replace('\r', '\n').replace('\n', '<br>')
 
 
 def get_biomeNotes(files_found, report_folder, seeker, wrap_text, timezone_offset):
@@ -63,8 +69,8 @@ def get_biomeNotes(files_found, report_folder, seeker, wrap_text, timezone_offse
                 time = convert_utc_human_to_timezone(time, timezone_offset)
                 identifier1 = protostuff['1']
                 identifier2 = protostuff['2']
-                message = protostuff['5']
-                messagehtml = (message.replace('\n', '<br>'))
+                message = str(protostuff['5'])
+                messagehtml = _format_note_html(message)
                 file_data_list.append((ts, time, record.state.name, record_counter, identifier1, identifier2, message, filename, record.data_start_offset))
                 file_data_list_html.append((ts, time, record.state.name, record_counter, identifier1, identifier2, messagehtml, filename, record.data_start_offset))
                 

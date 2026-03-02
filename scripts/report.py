@@ -2,12 +2,17 @@ import html
 import os
 from pathlib import Path
 import shutil
+from urllib.parse import quote
 
 from collections import OrderedDict
 from scripts.html_parts import *
+from scripts.html_security import escape_attr, escape_text, sanitize_html_fragment, sanitize_url
 from scripts.ilapfuncs import logfunc
 from scripts.version_info import ileapp_version, ileapp_contributors
 from scripts.report_icons import icon_mappings, feather_icon_names
+
+
+SAFE_LOGO_MIME_TYPES = {"image/png", "image/jpeg", "image/gif", "image/webp"}
 
 def get_icon_name(category, artifact):
     """
@@ -159,6 +164,10 @@ def get_file_content(path):
     f.close()
     return data
 
+
+def get_sanitized_file_content(path):
+    return sanitize_html_fragment(get_file_content(path))
+
 def create_index_html(reportfolderbase, time_in_secs, time_HMS, extraction_type, image_input_path, nav_list_data, casedata, profile_filename, lava_only):
     '''Write out the index.html page to the report folder'''
     case_list = []
@@ -209,20 +218,20 @@ def create_index_html(reportfolderbase, time_in_secs, time_HMS, extraction_type,
 
     # Get script run log (this will be tab2)
     devinfo_files_path = os.path.join(reportfolderbase, '_HTML', '_Script_Logs', 'DeviceInfo.html')
-    tab2_content = get_file_content(devinfo_files_path)
+    tab2_content = get_sanitized_file_content(devinfo_files_path)
 
     # Get script run log (this will be tab3)
     script_log_path = os.path.join(reportfolderbase, '_HTML', '_Script_Logs', 'Screen_Output.html')
-    tab3_content = get_file_content(script_log_path)
+    tab3_content = get_sanitized_file_content(script_log_path)
 
     # Get processed files list (this will be tab4)
     processed_files_path = os.path.join(reportfolderbase, '_HTML', '_Script_Logs', 'ProcessedFilesLog.html')
-    tab4_content = get_file_content(processed_files_path)
+    tab4_content = get_sanitized_file_content(processed_files_path)
 
     # Get processed LAVA list (this will be tab5)
     if lava_only:
         lava_path = os.path.join(reportfolderbase, '_HTML', '_Script_Logs', 'Lava_only_artifacts_log.html')
-        tab5_content = get_file_content(lava_path)
+        tab5_content = get_sanitized_file_content(lava_path)
         content += tabs_code_with_lava.format(tab1_content, tab2_content, tab3_content, tab4_content, tab5_content)
     else:
         content += tabs_code.format(tab1_content, tab2_content, tab3_content, tab4_content)
@@ -271,20 +280,25 @@ def generate_authors_table_code(ileapp_contributors):
     authors_data = ''
     for author_name, blog, tweet_handle, git in ileapp_contributors:
         author_data = ''
+        safe_author_name = escape_text(author_name)
         if blog:
-            author_data += f'<a href="{blog}" target="_blank">{blog_icon}</a> &nbsp;\n'
+            safe_blog = escape_attr(sanitize_url(blog))
+            author_data += f'<a href="{safe_blog}" target="_blank">{blog_icon}</a> &nbsp;\n'
         else:
             author_data += f'{blank_icon} &nbsp;\n'
         if tweet_handle:
-            author_data += f'<a href="https://twitter.com/{tweet_handle}" target="_blank">{twitter_icon}</a> &nbsp;\n'
+            safe_twitter_handle = quote(str(tweet_handle).strip(), safe="")
+            twitter_url = sanitize_url(f"https://twitter.com/{safe_twitter_handle}")
+            author_data += f'<a href="{escape_attr(twitter_url)}" target="_blank">{twitter_icon}</a> &nbsp;\n'
         else:
             author_data += f'{blank_icon} &nbsp;\n'
         if git:
-            author_data += f'<a href="{git}" target="_blank">{github_icon}</a>\n'
+            safe_git = escape_attr(sanitize_url(git))
+            author_data += f'<a href="{safe_git}" target="_blank">{github_icon}</a>\n'
         else:
             author_data += f'{blank_icon}'
 
-        authors_data += individual_contributor.format(author_name, author_data)
+        authors_data += individual_contributor.format(safe_author_name, author_data)
     return authors_data
 
 def generate_key_val_table_without_headings(title, data_list, agency_logo_mimetype, agency_logo_b64):
@@ -308,9 +322,10 @@ def generate_key_val_table_without_headings(title, data_list, agency_logo_mimety
 
     # Add the rows
     code += '<tr>'
-    if agency_logo_b64 and agency_logo_mimetype:
+    normalized_logo_mimetype = str(agency_logo_mimetype).strip().lower() if agency_logo_mimetype else ''
+    if agency_logo_b64 and normalized_logo_mimetype in SAFE_LOGO_MIME_TYPES:
         code += f'<td rowspan="{len(data_list) + 1}" style="text-align: center; vertical-align: middle">\
-            <img src="data:{agency_logo_mimetype};base64,{agency_logo_b64}" \
+            <img src="data:{escape_attr(normalized_logo_mimetype)};base64,{escape_attr(agency_logo_b64)}" \
             style="min-width: 50px; max-width:200px"></div>\
             </td>'
     for row in data_list:

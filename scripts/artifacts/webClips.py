@@ -3,6 +3,7 @@ import plistlib
 import base64
 
 from scripts.artifact_report import ArtifactHtmlReport
+from scripts.html_security import escape_attr, escape_text, sanitize_url
 from scripts.ilapfuncs import logfunc, logdevinfo, tsv, is_platform_windows 
 
 
@@ -51,10 +52,14 @@ def get_webClips(files_found, report_folder, seeker, wrap_text, timezone_offset)
         
     # Create the report
     for unique_id, data in webclip_data.items():
+        icon_src = sanitize_url(f'data:image/png;base64,{data["Icon_data"]}', allow_data_media=True)
+        safe_uid = escape_text(unique_id)
+        safe_title = escape_text(data["Title"])
+        safe_url = escape_text(data["URL"])
         htmlstring = (f'<table>')
         htmlstring = htmlstring +('<tr>')
-        htmlstring = htmlstring +(f'<td><img src="data:image/png;base64,{data["Icon_data"]}"></td>')
-        htmlstring = htmlstring +(f'<td><b>UID:{unique_id}</b><br> Title: {data["Title"]}<br>URL: {data["URL"]}</td>')
+        htmlstring = htmlstring +(f'<td><img src="{escape_attr(icon_src)}"></td>')
+        htmlstring = htmlstring +(f'<td><b>UID:{safe_uid}</b><br> Title: {safe_title}<br>URL: {safe_url}</td>')
         htmlstring = htmlstring +('</tr>')
         htmlstring = htmlstring +('</table>')
         data_list.append((htmlstring,))
@@ -64,7 +69,7 @@ def get_webClips(files_found, report_folder, seeker, wrap_text, timezone_offset)
     report.start_artifact_report(report_folder, f'WebClips')
     report.add_script()
     data_headers = ((f'WebClips',))     
-    report.write_artifact_data_table(data_headers, data_list, files_found[0], html_escape=False)
+    report.write_artifact_data_table(data_headers, data_list, files_found[0], html_no_escape=['WebClips'])
     report.end_artifact_report()
 
 __artifacts__ = {

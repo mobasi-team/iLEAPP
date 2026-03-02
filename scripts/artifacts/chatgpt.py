@@ -96,7 +96,7 @@ def get_chatgpt(files_found, report_folder, seeker, wrap_text, time_offset):
                     report.start_artifact_report(report_folder, f'Conversations Metadata', description)
                     report.add_script()
                     data_headers = ('Creation Time','Modification Date','Title','Conversation ID','Model','Custom Instructions (Model)','Custom Instructions (User)','Custom Instructions (Enabled)','Is Temporary','File Path') 
-                    report.write_artifact_data_table(data_headers, conversations_metadata, file_found, html_escape=False)
+                    report.write_artifact_data_table(data_headers, conversations_metadata, file_found)
                     report.end_artifact_report()
                     
                     tsvname = f'ChatGPT - Conversations Metadata'
@@ -114,7 +114,7 @@ def get_chatgpt(files_found, report_folder, seeker, wrap_text, time_offset):
                     report.start_artifact_report(report_folder, f'Conversations', description)
                     report.add_script()
                     data_headers = ('Creation Time','Message ID','Conversation Title','Conversation ID','Author','Parts','Content Type','Finish Details', 'Voice Mode Message','Metadata','File Path')
-                    report.write_artifact_data_table(data_headers, conversations_messages, file_found, html_escape=False)
+                    report.write_artifact_data_table(data_headers, conversations_messages, file_found)
                     report.end_artifact_report()
                     
                     tsvname = f'ChatGPT - Conversations'
@@ -143,7 +143,7 @@ def get_chatgpt(files_found, report_folder, seeker, wrap_text, time_offset):
                     report.start_artifact_report(report_folder, f'Draft Conversations', description)
                     report.add_script()
                     data_headers = ('Conversation ID','Content','File Path')
-                    report.write_artifact_data_table(data_headers, draft_messages, file_found, html_escape=False)
+                    report.write_artifact_data_table(data_headers, draft_messages, file_found)
                     report.end_artifact_report()
                     
                     tsvname = f'ChatGPT - Draft Conversations'
@@ -244,7 +244,7 @@ def get_chatgpt(files_found, report_folder, seeker, wrap_text, time_offset):
         report.add_script()
         prefs_files_found = ',\n'.join(account_list_files_found) 
         data_headers = ('Account ID','User ID','Email', 'Plan Type','Paid Plan','Workspace ID', 'Device ID','Segments Events')
-        report.write_artifact_data_table(data_headers, account_list, prefs_files_found, html_escape=False)
+        report.write_artifact_data_table(data_headers, account_list, prefs_files_found)
         report.end_artifact_report()
         
         tsvname = f'ChatGPT - Preferences'
@@ -257,7 +257,12 @@ def get_chatgpt(files_found, report_folder, seeker, wrap_text, time_offset):
         report.start_artifact_report(report_folder, 'Media Uploads', description)
         report.add_script()
         data_headers = ('Thumbnail','File Name','File Path')
-        report.write_artifact_data_table(data_headers, photo_list, filepath, html_escape=False)
+        report.write_artifact_data_table(
+            data_headers,
+            photo_list,
+            filepath,
+            html_no_escape=['Thumbnail']
+        )
         report.end_artifact_report()
         
         tsvname = 'ChatGPT - Media Uploads'
@@ -272,7 +277,12 @@ def get_chatgpt(files_found, report_folder, seeker, wrap_text, time_offset):
         report.start_artifact_report(report_folder, 'Voice Prompts', description)
         report.add_script()
         data_headers = ('Voice Prompt','File Name','File Path' )
-        report.write_artifact_data_table(data_headers, voice_list, filepath, html_escape=False)
+        report.write_artifact_data_table(
+            data_headers,
+            voice_list,
+            filepath,
+            html_no_escape=['Voice Prompt']
+        )
         report.end_artifact_report()
         
         tsvname = 'ChatGPT - Voice Prompts'

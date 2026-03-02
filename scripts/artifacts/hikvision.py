@@ -170,7 +170,9 @@ def get_hikvision(files_found, report_folder, seeker, wrap_text, timezone_offset
                 media = media_to_html(mfile[2], files_found, report_folder)
             data_list.append((mfile[0],mfile[1],media))
         media_files_dir = "*/mobile/Containers/Data/Application/[Application-GUID]/Documents/YYYY/MM/DD" #Generic path of the media files. Each file is stored within seperate dirs based on its creation date
-        report.write_artifact_data_table(data_headers, data_list, media_files_dir, html_escape = False)
+        report.write_artifact_data_table(
+            data_headers, data_list, media_files_dir, html_no_escape=['File Content']
+        )
         report.end_artifact_report()
 
         tsvname = f'Hikvision - User Created Media'

@@ -9,7 +9,20 @@ from scripts.ccl import ccl_bplist
 from html import escape
 
 from scripts.artifact_report import ArtifactHtmlReport
+from scripts.html_security import escape_attr, escape_text, sanitize_url
 from scripts.ilapfuncs import logfunc, is_platform_windows
+
+
+def _safe_text(value):
+    return escape_text(value)
+
+
+def _safe_href(value):
+    return escape_attr(sanitize_url(value))
+
+
+def _td(value):
+    return f"<td>{_safe_text(value)}</td>"
 
 
 def get_notificationsXI(files_found, report_folder, seeker, wrap_text, timezone_offset):
@@ -69,20 +82,26 @@ def get_notificationsXI(files_found, report_folder, seeker, wrap_text, timezone_
                     )  # write report
                     h.write("<html><body>")
                     h.write("<h2>iOS Delivered Notifications Triage Report </h2>")
-                    h.write(filename)
+                    h.write(_safe_text(filename))
                     h.write("<br/>")
                     h.write(
                         "<style> table, td {border: 1px solid black; border-collapse: collapse;}tr:nth-child(even) {background-color: #f2f2f2;} .table th { background: #888888; color: #ffffff}.table.sticky th{ position:sticky; top: 0; }</style>"
                     )
                     h.write("<br/>")
 
-                    h.write('<button onclick="hideRows()">Hide rows</button>')
-                    h.write('<button onclick="showRows()">Show rows</button>')
+                    h.write('<button id="hideRowsBtn" type="button">Hide rows</button>')
+                    h.write('<button id="showRowsBtn" type="button">Show rows</button>')
 
                     f = open(os.path.join(__location__,"script.txt"), "r")
                     for line in f:
                         h.write(line)
                     f.close()
+                    h.write(
+                        "<script>"
+                        "document.getElementById('hideRowsBtn')?.addEventListener('click', hideRows);"
+                        "document.getElementById('showRowsBtn')?.addEventListener('click', showRows);"
+                        "</script>"
+                    )
                     
                     h.write("<br>")
                     h.write('<table name="hide">')
@@ -104,7 +123,7 @@ def get_notificationsXI(files_found, report_folder, seeker, wrap_text, timezone_
                                 h.write("<td>$classes</td>")
                                 ob6 = str(plist2[i]["$classes"])
                                 h.write("<td>")
-                                h.write(str(ob6))
+                                h.write(_safe_text(ob6))
                                 h.write("</td>")
                                 h.write("</tr>")
                                 test = 1
@@ -116,7 +135,7 @@ def get_notificationsXI(files_found, report_folder, seeker, wrap_text, timezone_
                                 h.write("<td>$class</td>")
                                 ob5 = str(plist2[i]["$class"])
                                 h.write("<td>")
-                                h.write(str(ob5))
+                                h.write(_safe_text(ob5))
                                 h.write("</td>")
                                 h.write("</tr>")
                                 test = 1
@@ -128,7 +147,7 @@ def get_notificationsXI(files_found, report_folder, seeker, wrap_text, timezone_
                                 h.write("<td>NS.keys</td>")
                                 ob0 = str(plist2[i]["NS.keys"])
                                 h.write("<td>")
-                                h.write(str(ob0))
+                                h.write(_safe_text(ob0))
                                 h.write("</td>")
                                 h.write("</tr>")
                                 test = 1
@@ -140,7 +159,7 @@ def get_notificationsXI(files_found, report_folder, seeker, wrap_text, timezone_
                                 h.write('<tr name="hide">')
                                 h.write("<td>NS.objects</td>")
                                 h.write("<td>")
-                                h.write(str(ob1))
+                                h.write(_safe_text(ob1))
                                 h.write("</td>")
                                 h.write("</tr>")
 
@@ -159,7 +178,7 @@ def get_notificationsXI(files_found, report_folder, seeker, wrap_text, timezone_
                                 h.write("<tr>")
                                 h.write("<td>Time UTC</td>")
                                 h.write("<td>")
-                                h.write(str(timestamp))
+                                h.write(_safe_text(timestamp))
                                 # h.write(str(plist2[i]['NS.time']))
                                 h.write("</td>")
                                 h.write("</tr>")
@@ -173,7 +192,7 @@ def get_notificationsXI(files_found, report_folder, seeker, wrap_text, timezone_
                                 h.write('<tr name="hide">')
                                 h.write("<td>NS.base</td>")
                                 h.write("<td>")
-                                h.write(str(ob2))
+                                h.write(_safe_text(ob2))
                                 h.write("</td>")
                                 h.write("</tr>")
 
@@ -186,7 +205,7 @@ def get_notificationsXI(files_found, report_folder, seeker, wrap_text, timezone_
                                 h.write('<tr name="hide">')
                                 h.write("<td>$classname</td>")
                                 h.write("<td>")
-                                h.write(str(ob3))
+                                h.write(_safe_text(ob3))
                                 h.write("</td>")
                                 h.write("</tr>")
 
@@ -207,24 +226,24 @@ def get_notificationsXI(files_found, report_folder, seeker, wrap_text, timezone_
 
                                     h.write('<tr name="hide">')
                                     h.write("<td>ASCII</td>")
-                                    h.write("<td>" + str(plist2[i]) + "</td>")
+                                    h.write(_td(plist2[i]))
                                     h.write("</tr>")
 
                                 else:
                                     if plist2[i] in notiparams:
                                         h.write('<tr name="hide">')
                                         h.write("<td>ASCII</td>")
-                                        h.write("<td>" + str(plist2[i]) + "</td>")
+                                        h.write(_td(plist2[i]))
                                         h.write("</tr>")
                                     elif plist2[i] == " ":
                                         h.write('<tr name="hide">')
                                         h.write("<td>Null</td>")
-                                        h.write("<td>" + str(plist2[i]) + "</td>")
+                                        h.write(_td(plist2[i]))
                                         h.write("</tr>")
                                     else:
                                         h.write("<tr>")
                                         h.write("<td>ASCII</td>")
-                                        h.write("<td>" + str(plist2[i]) + "</td>")
+                                        h.write(_td(plist2[i]))
                                         h.write("</tr>")
 
                         except:
@@ -272,7 +291,7 @@ def get_notificationsXI(files_found, report_folder, seeker, wrap_text, timezone_
                                         h.write('<tr name="hide">')
                                         h.write("<td>NS.data</td>")
                                         h.write("<td>")
-                                        h.write(str(secondplistint))
+                                        h.write(_safe_text(secondplistint))
                                         h.write("</td>")
                                         h.write("</tr>")
 
@@ -282,7 +301,7 @@ def get_notificationsXI(files_found, report_folder, seeker, wrap_text, timezone_
                                         h.write('<tr name="hide">')
                                         h.write("<td>NS.data</td>")
                                         h.write("<td>")
-                                        h.write(str(secondplistint))
+                                        h.write(_safe_text(secondplistint))
                                         h.write("</td>")
                                         h.write("</tr>")
                         except:
@@ -300,7 +319,10 @@ def get_notificationsXI(files_found, report_folder, seeker, wrap_text, timezone_
     for name in files:
         try:
             size = os.path.getsize(f"{path}{name}/DeliveredNotificationsReport.html")
-            key = (f'<a href = "{level2}/{name}/DeliveredNotificationsReport.html" style = "color:blue" target="content">{name}</a>')
+            key = (
+                f'<a href="{_safe_href(f"{level2}/{name}/DeliveredNotificationsReport.html")}" '
+                f'style="color:blue" target="content">{_safe_text(name)}</a>'
+            )
             dict[key] = size
         except NotADirectoryError as nade:
             logfunc(nade)
@@ -319,7 +341,9 @@ def get_notificationsXI(files_found, report_folder, seeker, wrap_text, timezone_
     report.start_artifact_report(report_folder, 'iOS Notifications', description)
     report.add_script()
     data_headers = ('Bundle GUID', 'Reports Size')
-    report.write_artifact_data_table(data_headers, data_list, location, html_escape=False)
+    report.write_artifact_data_table(
+        data_headers, data_list, location, html_no_escape=['Bundle GUID']
+    )
     report.end_artifact_report()
     
 

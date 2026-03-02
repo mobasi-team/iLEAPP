@@ -245,7 +245,9 @@ def get_biomeIntents(files_found, report_folder, seeker, wrap_text, timezone_off
             report = ArtifactHtmlReport(f'Intents')
             report.start_artifact_report(report_folder, f'Biome Intents - {filename}', description)
             report.add_script()
-            report.write_artifact_data_table(data_headers, data_list, file_found, html_escape=False)
+            report.write_artifact_data_table(
+                data_headers, data_list, file_found, html_no_escape=['Data']
+            )
             report.end_artifact_report()
 
             tsvname = f'Biome Intents - {filename}'

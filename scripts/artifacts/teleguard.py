@@ -5,9 +5,11 @@ import os
 import base64
 from scripts.artifact_report import ArtifactHtmlReport
 from scripts.ilapfuncs import logfunc, tsv, timeline, open_sqlite_db_readonly, media_to_html
+from scripts.html_security import escape_text
 
 def get_teleguard(files_found, report_folder, seeker, wrap_text, time_offset):
-    
+    mediafilepaths = []
+
     #datos =  seeker.search('**/*com.apple.mobile_container_manager.metadata.plist')
     for file_foundm in files_found:
         if file_foundm.endswith('.com.apple.mobile_container_manager.metadata.plist'):
@@ -55,7 +57,7 @@ def get_teleguard(files_found, report_folder, seeker, wrap_text, time_offset):
                             for key, values in mediafiles.items():
                                 #print(key,values)
                                 thumb = thumb + media_to_html(key, mediafilepaths, report_folder)
-                                thumb = thumb + f'<br>{values}</br><br></br>'
+                                thumb = thumb + f'<br>{escape_text(values)}</br><br></br>'
                         else:
                             thumb = ''
                     else:
@@ -65,7 +67,12 @@ def get_teleguard(files_found, report_folder, seeker, wrap_text, time_offset):
                     
                     data_list.append((row[0], row[1], row[2], row[3], row[4], row[5], thumb, row[7], row[8]))
         
-                report.write_artifact_data_table(data_headers, data_list, file_found, html_escape=False)
+                report.write_artifact_data_table(
+                    data_headers,
+                    data_list,
+                    file_found,
+                    html_no_escape=['Media']
+                )
                 report.end_artifact_report()
                 
                 tsvname = f'Teleguard Messages'
@@ -106,7 +113,7 @@ def get_teleguard(files_found, report_folder, seeker, wrap_text, time_offset):
                 report.add_script()
                 data_headers = ('Timestamp', 'Channel ID', 'Header', 'Content','Type','Local Status','Views Count','Likes Count','Dislikes Count', 'Metadata', 'Media')
                 
-                report.write_artifact_data_table(data_headers, data_list, file_found, html_escape=False)
+                report.write_artifact_data_table(data_headers, data_list, file_found)
                 report.end_artifact_report()
                 
                 tsvname = f'Teleguard Posts'
@@ -153,7 +160,12 @@ def get_teleguard(files_found, report_folder, seeker, wrap_text, time_offset):
                 report.add_script()
                 data_headers = ('Last Activity Timestamp', 'Server ID', 'Alias', 'Type','Color','Avatar','Options','Info','Last Visit Time', 'Personal ID')
                 
-                report.write_artifact_data_table(data_headers, data_list, file_found, html_escape=False)
+                report.write_artifact_data_table(
+                    data_headers,
+                    data_list,
+                    file_found,
+                    html_no_escape=['Avatar']
+                )
                 report.end_artifact_report()
                 
                 tsvname = f'Teleguard Contacts'
@@ -184,7 +196,7 @@ def get_teleguard(files_found, report_folder, seeker, wrap_text, time_offset):
                 report.add_script()
                 data_headers = ('ID', 'Alias', 'Description', 'Category','Color','Avatar ID','Subscribers Count','Admin','Posts Count', 'Is Deleted', 'Language','Type')
                 
-                report.write_artifact_data_table(data_headers, data_list, file_found, html_escape=False)
+                report.write_artifact_data_table(data_headers, data_list, file_found)
                 report.end_artifact_report()
                 
                 tsvname = f'Teleguard Channels'

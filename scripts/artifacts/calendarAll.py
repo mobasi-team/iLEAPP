@@ -40,9 +40,42 @@ __artifacts_v2__ = {
     }
 }
 
-from urllib.parse import unquote
+from urllib.parse import quote, unquote
+from scripts.html_security import escape_attr, escape_text, sanitize_style, sanitize_url
 from scripts.ilapfuncs import open_sqlite_db_readonly, does_table_exist_in_db, does_column_exist_in_db,\
     convert_ts_human_to_utc, artifact_processor, get_birthdate
+
+
+def _safe_text(value):
+    return escape_text(value)
+
+
+def _sanitize_calendar_color(color):
+    color_text = str(color).strip() if color is not None else ''
+    if not color_text:
+        return ''
+    if any(ch in color_text for ch in ('"', "'", '<', '>', ';')):
+        return ''
+    return sanitize_style(f'color: {color_text};')
+
+
+def _build_location_coordinates_tag(latitude, longitude):
+    if not (latitude and longitude):
+        return ''
+
+    lat_raw = str(latitude)
+    lon_raw = str(longitude)
+    location_coordinates = f'{_safe_text(lat_raw)}, {_safe_text(lon_raw)}'
+    map_url = (
+        "https://www.openstreetmap.org/"
+        f"?lat={quote(lat_raw, safe='')}&lon={quote(lon_raw, safe='')}&zoom=17&layers=M"
+    )
+    safe_href = escape_attr(sanitize_url(map_url))
+
+    return (
+        f'{location_coordinates} &nbsp; '
+        f'<a href="{safe_href}" target="_blank" rel="noopener noreferrer">&#x1F5FA;</a>'
+    )
 
 
 def get_sharees(cursor):
@@ -65,9 +98,10 @@ def get_sharees(cursor):
         for row in all_rows:
             key = row[0]
             address = row[1].replace('mailto:', '') if row[1] else ''
+            address = unquote(address)
             name = f' ({row[2]})' if row[2] else ''
             participant = f'{address}{name}'
-            sharing_participant = f'''{participant} -> {row[3]}'''
+            sharing_participant = f'{_safe_text(participant)} -> {_safe_text(row[3])}'
             sharing_participants = data_dict.get(key, '')
             if sharing_participants:
                 sharing_participants += f',<br>{sharing_participant}'
@@ -104,6 +138,7 @@ def get_invitees(cursor):
         for row in all_rows:
             key = row[0]
             participant = f'{row[1]} - {row[2]}' if row[1] else row[2]
+            participant = participant if participant else ''
             status = row[3]
             if status == 'No response':
                 html_status = '<span style="color: gray;" title="No response">&#11044;</span>'
@@ -115,7 +150,7 @@ def get_invitees(cursor):
                 html_status = '<span style="color: orange;" title="Maybe">&#11044;</span>'
             else:
                 html_status = ''
-            sharing_participant = f'{html_status} {participant}'
+            sharing_participant = f'{html_status} {_safe_text(participant)}'
 
             sharing_participants = data_dict.get(key, '')
             if sharing_participants:
@@ -136,9 +171,13 @@ def get_invitees(cursor):
 
 def get_calendar_name(name, color):
     if color:
-        calendar_name = f'<span style="color: {color};">&#9673; </span>{name}'
+        color_style = _sanitize_calendar_color(color)
+        if color_style:
+            calendar_name = f'<span style="{escape_attr(color_style)}">&#9673; </span>{_safe_text(name)}'
+        else:
+            calendar_name = f'&#9711; {_safe_text(name)}'
     else:
-        calendar_name = f'&#9711; {name}'
+        calendar_name = f'&#9711; {_safe_text(name)}'
     return calendar_name
 
 @artifact_processor
@@ -239,15 +278,7 @@ def calendarEvents(context):
                     latitude = row[10]
                     longitude = row [11]
                     location_coordinates = f'{latitude}, {longitude}' if latitude and longitude else ''
-
-                    if latitude and longitude:
-                        location_coordinates_tag = f'''
-                        {location_coordinates} &nbsp; 
-                        <a href="https://www.openstreetmap.org/?lat={latitude}&lon=%20{longitude}&zoom=17&layers=M" target="_blank">
-                        &#x1F5FA;</a>
-                        '''
-                    else:
-                        location_coordinates_tag = ''
+                    location_coordinates_tag = _build_location_coordinates_tag(latitude, longitude)
 
                     invitation_from = f'{row[12]} - {row[13]}' if row[12] else row[13]
 

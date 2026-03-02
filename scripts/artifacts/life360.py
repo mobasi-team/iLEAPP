@@ -20,6 +20,7 @@ import sqlite3
 
 from scripts.artifact_report import ArtifactHtmlReport
 from scripts.ilapfuncs import logfunc, tsv, timeline, is_platform_windows, open_sqlite_db_readonly, convert_ts_human_to_utc, convert_utc_human_to_timezone, kmlgen
+from scripts.html_security import escape_attr, sanitize_url
 
 def get_life360(files_found, report_folder, seeker, wrap_text, time_offset):
 
@@ -141,7 +142,10 @@ def get_life360(files_found, report_folder, seeker, wrap_text, time_offset):
             usageentries = len(all_rows)
             if usageentries > 0:
                 for row in all_rows:
-                    avatar = f'<img src="{row[5]}" alt="image"width="150">'
+                    avatar = ''
+                    if row[5]:
+                        safe_avatar_url = escape_attr(sanitize_url(row[5]))
+                        avatar = f'<img src="{safe_avatar_url}" alt="image" width="150">'
                 
                     data_list_members.append((row[0],row[1],row[2],row[3],row[4],avatar,row[6],row[7],row[8]))
             db.close()
@@ -155,7 +159,7 @@ def get_life360(files_found, report_folder, seeker, wrap_text, time_offset):
         report.add_script()
         data_headers = ('Timestamp', 'Latitude', 'Longitude', 'Altitude', 'Speed (mps)', 'Heading', 'Activity Type', 'Location Mode', 'Location Precision','Accuracy (+/- m)','Vertical Accuracy (+/- m)','Age')
 
-        report.write_artifact_data_table(data_headers, data_list_geo, file_found, html_escape=False)
+        report.write_artifact_data_table(data_headers, data_list_geo, file_found)
         report.end_artifact_report()
         
         tsvname = f'Life360 - Locations'
@@ -176,7 +180,7 @@ def get_life360(files_found, report_folder, seeker, wrap_text, time_offset):
         report.add_script()
         data_headers = ('Timestamp', 'Device Battery (%)', 'Charging')
 
-        report.write_artifact_data_table(data_headers, data_list_dev, file_found, html_escape=False)
+        report.write_artifact_data_table(data_headers, data_list_dev, file_found)
         report.end_artifact_report()
         
         tsvname = f'Life360 - Device Battery'
@@ -194,7 +198,7 @@ def get_life360(files_found, report_folder, seeker, wrap_text, time_offset):
         report.add_script()
         data_headers = ('Timestamp', 'Message ID', 'Sender First Name', 'Sender Last Name', 'Message', 'Sent Status', 'Message Seen', 'Message Deleted', 'Message Liked', 'Action','Location Name','Latitude','Longitude')
 
-        report.write_artifact_data_table(data_headers, data_list_messaging, file_found, html_escape=False)
+        report.write_artifact_data_table(data_headers, data_list_messaging, file_found)
         report.end_artifact_report()
         
         tsvname = f'Life360 - Chat Messages'
@@ -212,7 +216,12 @@ def get_life360(files_found, report_folder, seeker, wrap_text, time_offset):
         report.add_script()
         data_headers = ('First Name','Last Name','Email','Phone','Member ID','Avatar URL','Local User','Admin','Cirle Name')
 
-        report.write_artifact_data_table(data_headers, data_list_members, file_found, html_escape=False)
+        report.write_artifact_data_table(
+            data_headers,
+            data_list_members,
+            file_found,
+            html_no_escape=['Avatar URL']
+        )
         report.end_artifact_report()
         
         tsvname = f'Life360 - Members'

@@ -186,7 +186,7 @@ def get_account(file_found, report_folder, timezone_offset):
 
         data_list.append(row)
 
-        report.write_artifact_data_table(data_headers, data_list, ', '.join(source_files), html_escape=False)
+        report.write_artifact_data_table(data_headers, data_list, ', '.join(source_files))
         report.end_artifact_report()
                 
         tsvname = f'Uber App Account'
@@ -247,7 +247,7 @@ def get_payment_profiles(file_found, report_folder, timezone_offset):
         report.add_script()
         data_headers = ('Card type', 'Account name', 'Card BIN', 'Number', 'Category', 'Expires', 'Status', 'Using type', 'Country code', 'ID', 'Location') 
 
-        report.write_artifact_data_table(data_headers, data_list, file_found, html_escape=False)
+        report.write_artifact_data_table(data_headers, data_list, file_found)
         report.end_artifact_report()
                     
         tsvname = f'Uber App Payment Profiles'
@@ -302,7 +302,7 @@ def get_eyeball(file_found, report_folder, timezone_offset):
                 report.add_script()
                 data_headers = ('Timestamp', 'Latitude', 'Longitude', 'Course', 'Location') 
 
-                report.write_artifact_data_table(data_headers, data_list, file_found, html_escape=False)
+                report.write_artifact_data_table(data_headers, data_list, file_found)
                 report.end_artifact_report()
                     
                 tsvname = 'Uber App Nearby Vehicles'
@@ -341,7 +341,7 @@ def get_eyeball(file_found, report_folder, timezone_offset):
                 report.add_script()
                 data_headers = ('Latitude', 'Longitude', 'Address', 'ID', 'Location') 
 
-                report.write_artifact_data_table(data_headers, data_list, file_found, html_escape=False)
+                report.write_artifact_data_table(data_headers, data_list, file_found)
                 report.end_artifact_report()
                 
                 tsvname = 'Uber App User Address Location'
@@ -590,7 +590,7 @@ def get_locations(ldb_path, report_folder, timezone_offset):
         report.add_script()
         data_headers = ('Timestamp', 'Latitude', 'Longitude', 'Horizontal acc.', 'Altitude', 'Vertical acc.', 'Course', 'Speed', 'State', 'Location') 
 
-        report.write_artifact_data_table(data_headers, data_list, ldb_path, html_escape=False)
+        report.write_artifact_data_table(data_headers, data_list, ldb_path)
         report.end_artifact_report()
                 
         tsvname = 'Uber App Locations'

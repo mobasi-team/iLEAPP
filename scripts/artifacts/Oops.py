@@ -66,7 +66,7 @@ def get_OopsMessages(files_found, report_folder, seeker, wrap_text, timezone_off
         report.start_artifact_report(report_folder, 'Oops Messages', description)
         report.add_script()
         data_headers = ('Date Sent','Date Received','Message Type','Sender Name','Sender ID','Direction','Message','Nickname','User ID')
-        report.write_artifact_data_table(data_headers, data_list, file_found,html_escape=False)
+        report.write_artifact_data_table(data_headers, data_list, file_found)
         report.end_artifact_report()
         
         tsvname = 'Oops Messages'
@@ -77,4 +77,3 @@ def get_OopsMessages(files_found, report_folder, seeker, wrap_text, timezone_off
     
     else:
         logfunc('No Oops data available')
-

@@ -70,7 +70,7 @@ def get_uberPlaces(files_found, report_folder, seeker, wrap_text, timezone_offse
         report.start_artifact_report(report_folder, 'Uber - Places', description)
         report.add_script()
         data_headers = ('Timestamp','Last Used','Uber ID','Distance (Meters)','Distance To Target','Latitude','Longitude','Place Name','Place Address','Tag','Usage','Trip Count','Provider')
-        report.write_artifact_data_table(data_headers, data_list, file_found,html_escape=False)
+        report.write_artifact_data_table(data_headers, data_list, file_found)
         report.end_artifact_report()
         
         tsvname = 'Uber - Places'

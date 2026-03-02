@@ -153,7 +153,7 @@ def get_icloudPhotoMeta(files_found, report_folder, seeker, wrap_text, timezone_
             report.start_artifact_report(report_folder, 'iCloud - Photos Metadata'+' '+str(counter))
             report.add_script()
             data_headers = ('Timestamp', 'Row ID','Record Type','Decoded', 'Title', 'Filesize', 'Latitude', 'Longitude', 'Altitude', 'GPS Datestamp','GPS Time', 'Added Date', 'Timezone Offset','Decoded TZ', 'Is Deleted?','Is Expunged?','Import Date', 'Modification Date', 'Filesize', 'ID', 'TIFF', 'EXIF')
-            report.write_artifact_data_table(data_headers, data_list, file_found, html_escape=False)
+            report.write_artifact_data_table(data_headers, data_list, file_found)
             report.end_artifact_report()
             
             tsvname = 'iCloud - Photos Metadata'

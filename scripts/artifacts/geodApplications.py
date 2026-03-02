@@ -36,7 +36,7 @@ def get_geodApplications(files_found, report_folder, seeker, wrap_text, timezone
 		report.start_artifact_report(report_folder, 'Applications', description)
 		report.add_script()
 		data_headers = ("Creation Time", "Count ID", "Application")
-		report.write_artifact_data_table(data_headers, data_list, file_found, html_escape = False)
+		report.write_artifact_data_table(data_headers, data_list, file_found)
 		report.end_artifact_report()
 
 		tsvname = 'Geolocation Applications'

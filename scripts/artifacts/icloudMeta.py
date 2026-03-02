@@ -54,7 +54,7 @@ def get_icloudMeta(files_found, report_folder, seeker, wrap_text, timezone_offse
                 report.start_artifact_report(report_folder, 'iCloud - File Metadata'+' '+str(counter))
                 report.add_script()
                 data_headers = ('Btime','Ctime','Mtime', 'Name', 'Last Editor Name', 'Doc ID', 'Parent ID', 'Type', 'Deleted?','Size', 'Zone', 'Executable?','Hidden?')   
-                report.write_artifact_data_table(data_headers, data_list, file_found, html_escape=False)
+                report.write_artifact_data_table(data_headers, data_list, file_found)
                 report.end_artifact_report()
                 
                 tsvname = 'iCloud - File Metadata'

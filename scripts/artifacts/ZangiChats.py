@@ -70,7 +70,7 @@ def get_zangichats(files_found, report_folder, seeker, wrap_text, time_offset):#
         report.start_artifact_report(report_folder, 'Zangi Chats', description)
         report.add_script()
         data_headers = ('Timestamp','First Name','Last Name','Message Text','Direction','Number')#THIS IS WHERE YOU DEFINE THE COLUMN NAMES THAT SHOW UP IN THE REPORT AND SHOULD FOLLOW THE ORDER OF YOUR QUERY. 
-        report.write_artifact_data_table(data_headers, data_list, file_found,html_escape=False)
+        report.write_artifact_data_table(data_headers, data_list, file_found)
         report.end_artifact_report()
         
         tsvname = 'Zangi Chats'#UPDATE THIS TO MATCH YOUR ARTIFACT

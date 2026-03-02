@@ -39,7 +39,9 @@ def get_geodPDPlaceCache(files_found, report_folder, seeker, wrap_text, timezone
 		report.start_artifact_report(report_folder, 'PD Place Cache', description)
 		report.add_script()
 		data_headers = ( "last access time", "requestkey", "pdplacehash", "expire time", "pd place")
-		report.write_artifact_data_table(data_headers, data_list, file_found, html_escape = False)
+		report.write_artifact_data_table(
+			data_headers, data_list, file_found, html_no_escape=['pd place']
+		)
 		report.end_artifact_report()
 
 		tsvname = 'Geolocation PD Place Caches'

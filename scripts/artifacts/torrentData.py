@@ -5,6 +5,7 @@ import hashlib
 from datetime import datetime
 
 from scripts.artifact_report import ArtifactHtmlReport
+from scripts.html_security import escape_text
 from scripts.ilapfuncs import logfunc, tsv, timeline, is_platform_windows, open_sqlite_db_readonly, kmlgen
 
 def get_TorrentData(files_found, report_folder, seeker, wrap_text, timezone_offset):
@@ -56,7 +57,7 @@ def get_TorrentData(files_found, report_folder, seeker, wrap_text, timezone_offs
                                                 filen = (iivalue[0])
                                                 
                                     #print(f'Path: {dirr}/{filen}')
-                                aggf = aggf + f'<tr><td>{dirr}</td><td>{filen}</td></tr>'
+                                aggf = aggf + f'<tr><td>{escape_text(dirr)}</td><td>{escape_text(filen)}</td></tr>'
                             aggf = aggf + f'</table>'    
                         #print(ikey, ivalue)
                 elif key == b'trackers':
@@ -104,7 +105,7 @@ def get_TorrentData(files_found, report_folder, seeker, wrap_text, timezone_offs
         report.start_artifact_report(report_folder, 'Torrent Data')
         report.add_script()
         data_headers = ('Torrent Name','Info Hash','Path')
-        report.write_artifact_data_table(data_headers, data_list, file_found,html_escape=False)
+        report.write_artifact_data_table(data_headers, data_list, file_found, html_no_escape=['Path'])
         report.end_artifact_report()
         
         tsvname = f'Torrent Data'

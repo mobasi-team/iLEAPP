@@ -2,6 +2,7 @@
 import os
 import pandas as pd
 import json
+from scripts.html_security import escape_attr, escape_text, sanitize_html_fragment, sanitize_url
 
 """
 This helper renders chat conversations passed as a json dump of a dictionary:
@@ -71,83 +72,132 @@ chat_HTML= """
 
 js = """
 <script>
+function sanitizeUrl(url, allowDataMedia){
+    if (!url) return "#";
+    const value = String(url).trim();
+    if (!value) return "#";
+    const lowered = value.toLowerCase();
+    if (lowered.startsWith("javascript:") || lowered.startsWith("vbscript:")) return "#";
+    if (lowered.startsWith("data:")) {
+        if (allowDataMedia && (lowered.startsWith("data:image/") || lowered.startsWith("data:audio/") || lowered.startsWith("data:video/"))) {
+            return value;
+        }
+        return "#";
+    }
+    return value;
+}
+
+function sanitizeFragment(htmlText){
+    const template = document.createElement("template");
+    template.innerHTML = htmlText || "";
+    const blockedTags = ["SCRIPT", "STYLE", "IFRAME", "OBJECT", "EMBED"];
+    const nodes = template.content.querySelectorAll("*");
+    for (const node of nodes) {
+        if (blockedTags.includes(node.tagName)) {
+            node.remove();
+            continue;
+        }
+        const attrs = Array.from(node.attributes);
+        for (const attr of attrs) {
+            const name = attr.name.toLowerCase();
+            if (name.startsWith("on")) {
+                node.removeAttribute(attr.name);
+                continue;
+            }
+            if (name === "href" || name === "src") {
+                const allowDataMedia = name === "src" && ["IMG", "AUDIO", "VIDEO", "SOURCE"].includes(node.tagName);
+                node.setAttribute(attr.name, sanitizeUrl(attr.value, allowDataMedia));
+            }
+        }
+    }
+    return template.content;
+}
+
 function createDivMessages (m){
 
-    var messType = '<div class="message my-message">';
-    var liTag = '<li>';
-    var messDataTag = '<div class="message-data">';
-    var name = m["data-name"];
+    const li = document.createElement("li");
+    const messageData = document.createElement("div");
+    messageData.className = "message-data";
+    const messageBlock = document.createElement("div");
+    messageBlock.className = "message my-message";
+    let name = m["data-name"] || "";
 
     if (m["from_me"] == 1) {
-        messType = '<div class="message other-message float-right">';
-        liTag = '<li class="clearfix">'
-        messDataTag = '<div class="message-data align-right">';
+        messageBlock.className = "message other-message float-right";
+        li.className = "clearfix";
+        messageData.className = "message-data align-right";
         name = "Local User";
     }
 
-    var res = liTag;
-    res += messDataTag;
-    res += '<span class="message-data-time" >';
-    res += m["data-time"];
-    res += '</span> &nbsp; &nbsp;';
-    res += '<span class="message-data-name" >';
-    res += name;
-    res += '</span>';
-    res += '</div>';
-    res += messType;
-    res += m["body_to_render"];
-    res += '</div>';
-    res += '</li>';
+    const ts = document.createElement("span");
+    ts.className = "message-data-time";
+    ts.textContent = m["data-time"] || "";
+    const spacer = document.createTextNode(" \u00a0 \u00a0 ");
+    const nameNode = document.createElement("span");
+    nameNode.className = "message-data-name";
+    nameNode.textContent = name;
+    messageData.appendChild(ts);
+    messageData.appendChild(spacer);
+    messageData.appendChild(nameNode);
 
-    return res;
+    const safeBody = sanitizeFragment(m["body_to_render"] || "");
+    messageBlock.appendChild(safeBody);
+
+    li.appendChild(messageData);
+    li.appendChild(messageBlock);
+    return li;
 }
 
 function showHistory (messages, name){
 
-    html = "<ul>";
+    const container = document.getElementById("chat-history");
+    container.textContent = "";
+    const ul = document.createElement("ul");
     for (let m in messages){
-      html += createDivMessages(messages[m], name);
+      ul.appendChild(createDivMessages(messages[m], name));
     }
-    html += "</ul>";
-    $("#chat-history").html(html);
+    container.appendChild(ul);
     return false;
 }
 
 function createPeopleList(list){
 
-    var res = '';
+    const listNode = document.getElementById("list");
+    listNode.textContent = "";
     for (let p in list){
-        res += '<li class="clearfix" id="';
-        res += list[p];
-        res += '">';
-        res +=  '<div class="about">';
-        res +=    '<div class="name">';
-        res += list[p];
-        res += '</div>';
-        res +=  '</div>';
-        res += '</li>';
+        const li = document.createElement("li");
+        li.className = "clearfix";
+        li.dataset.contact = list[p];
+        const about = document.createElement("div");
+        about.className = "about";
+        const name = document.createElement("div");
+        name.className = "name";
+        name.textContent = list[p];
+        about.appendChild(name);
+        li.appendChild(about);
+        listNode.appendChild(li);
     }
-    $("#list").html(res);
 }
 
 function updateHeader(name, num){
-    $("#chat-with").html(name);
-    $("#chat-num-messages").html("Total: "+num)
+    document.getElementById("chat-with").textContent = name;
+    document.getElementById("chat-num-messages").textContent = "Total: " + num;
     return false;
 }
 
 $(document).ready(function() {
-    var messages = JSON.parse(json);
+    var messages = json;
 
     createPeopleList(Object.keys(messages));
 
-    $('.people-list li').click(function(){
-        $(this).addClass('active').siblings().removeClass('active');
-        var id = $(this).attr('id');
-        showHistory(messages[id]);
-        updateHeader(id,Object.keys(messages[id]).length);
+    $('#list').on('click', 'li', function(){
+        $('.people-list li').removeClass('active');
+        $(this).addClass('active');
+        var id = this.dataset.contact;
+        showHistory(messages[id], id);
+        updateHeader(id, Object.keys(messages[id]).length);
         return false;
-    });
+    })
 });
 </script>
 """
@@ -165,11 +215,18 @@ mimeTypeIcon = {
 format JS to include in report html
 """
 def render_js_chat(chat_json):
+    safe_chat_json = (
+        chat_json.replace('<', '\\u003c')
+        .replace('>', '\\u003e')
+        .replace('&', '\\u0026')
+        .replace('\u2028', '\\u2028')
+        .replace('\u2029', '\\u2029')
+    )
     json_js = """
     <script>
-     var json = {0!r};
+     var json = {0};
     </script>
-    """.format(chat_json)
+    """.format(safe_chat_json)
     return '\n'.join([json_js,js])
 
 """
@@ -179,9 +236,12 @@ def integrateAtt(rec):
     if rec["file-path"]:
         att_type = rec["content-type"].split('/')[0] if rec["content-type"] else 'application'
         filename = os.path.basename(rec["file-path"])
-        body = rec["message"] if rec["message"] else ''
+        body = escape_text(rec["message"] if rec["message"] else '')
+        safe_path = escape_attr(sanitize_url(rec["file-path"]))
+        safe_content_type = escape_attr(rec["content-type"]) if rec["content-type"] else ""
+        safe_filename = escape_text(filename)
         if att_type == 'image':               
-            source = '<img src="{}" width="256" height="256"/>'.format(rec["file-path"])
+            source = '<img src="{}" width="256" height="256"/>'.format(safe_path)
         
         elif att_type == 'audio':
             source = """
@@ -189,20 +249,20 @@ def integrateAtt(rec):
               <source src="{0}" type="{1}">
               <p><a href="{0}"></a> </p>
             </audio>
-            """.format(rec['file-path'], rec["content-type"])
+            """.format(safe_path, safe_content_type)
         elif att_type == 'video':
             source = """
             <video controls width="256">
               <source src="{0}" type="{1}">
               <p><a href="{0}"></a> </p>
             </video>
-            """.format(rec['file-path'], rec["content-type"])
+            """.format(safe_path, safe_content_type)
         else:
-            source = '<a href="{}">{}</a>'.format(rec["file-path"],filename)
+            source = '<a href="{}">{}</a>'.format(safe_path, safe_filename)
         
-        return "\n".join([body,mimeTypeIcon[att_type]+' '+source])
+        return sanitize_html_fragment("\n".join([body, mimeTypeIcon[att_type] + ' ' + source]))
     else:
-        return rec["message"]
+        return escape_text(rec["message"]) if rec["message"] else ""
 
 
 """
@@ -229,7 +289,6 @@ def render_chat(df):
 
     json_chat = json.dumps(chats)
     return render_js_chat(json_chat)
-
 
 
 

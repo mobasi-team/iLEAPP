@@ -5,7 +5,21 @@ import shutil
 import xml.etree.ElementTree as ET
 
 from scripts.artifact_report import ArtifactHtmlReport
-from scripts.ilapfuncs import logfunc, tsv, is_platform_windows
+from scripts.html_security import escape_attr, sanitize_url
+from scripts.ilapfuncs import logfunc, tsv
+
+
+def _build_pending_file_thumb(report_folder, content_id):
+    content_basename = os.path.basename(str(content_id) if content_id else '')
+    if not content_basename:
+        return ''
+
+    if sanitize_url(content_basename) == '#':
+        safe_src = '#'
+    else:
+        safe_src = sanitize_url(os.path.join(report_folder, content_basename))
+
+    return f'<img src="{escape_attr(safe_src)}" width="300"></img>'
 
 
 def get_kikPendingUploads(files_found, report_folder, seeker, wrap_text, timezone_offset):
@@ -48,7 +62,7 @@ def get_kikPendingUploads(files_found, report_folder, seeker, wrap_text, timezon
                 state = a_dict['state']
                 uploadStartTime = a_dict['uploadStartTime']
         
-        thumb = f'<img src="{report_folder}{contentID}"  width="300"></img>'
+        thumb = _build_pending_file_thumb(report_folder, contentID)
         
         data_list.append((uploadStartTime, appID, contentID, progress, retriesRemaining, state, thumb))
 
@@ -56,8 +70,9 @@ def get_kikPendingUploads(files_found, report_folder, seeker, wrap_text, timezon
                         
         if len(data_list) > 0:
             
+            content_basename = os.path.basename(contentID) if contentID else ''
             for match in files_found:
-                if contentID in match:
+                if content_basename and os.path.basename(match) == content_basename:
                     shutil.copy2(match, report_folder)
             
             # for x in len(data_list):

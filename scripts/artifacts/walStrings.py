@@ -57,7 +57,7 @@ def get_walStrings(files_found, report_folder, seeker, wrap_text, timezone_offse
     report.start_artifact_report(report_folder, 'Strings - SQLite Journal & WAL', description)
     report.add_script()
     data_headers = ('Report', 'Location')
-    report.write_artifact_data_table(data_headers, data_list, location, html_escape=False)
+    report.write_artifact_data_table(data_headers, data_list, location, html_no_escape=['Report'])
     report.end_artifact_report()
 
 __artifacts__ = {

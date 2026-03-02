@@ -2,6 +2,7 @@ import plistlib
 
 
 from scripts.artifact_report import ArtifactHtmlReport
+from scripts.html_security import escape_text
 from scripts.ilapfuncs import logfunc, logdevinfo, is_platform_windows
 
 
@@ -31,13 +32,13 @@ def get_iconsScreen(files_found, report_folder, seeker, wrap_text, timezone_offs
                 if isinstance(rows, dict):
                     var = rows
                     if 'listType' in var.keys():
-                        foldername = var['displayName']
+                        foldername = escape_text(var.get('displayName', ''))
                         rows = ''
                         bundlesinfolder = var['iconLists']
                         total_app = 0
                         for items in bundlesinfolder:
                             for bundle in items:
-                                rows = rows + '<br>' + bundle
+                                rows = rows + '<br>' + escape_text(bundle)
                                 total_app += 1
                         rows = (f'Folder: {foldername} ({total_app} Apps)') + rows
                     elif 'gridSize' in var.keys():
@@ -47,16 +48,18 @@ def get_iconsScreen(files_found, report_folder, seeker, wrap_text, timezone_offs
                         if 'elementType' in var.keys():
                             widget_identifier = var['widgetIdentifier'] if var[
                                 'elementType'] == 'widget' else var['elementType']
-                            rows = (f'Widget<br>{widget_identifier}')
+                            rows = (f'Widget<br>{escape_text(widget_identifier)}')
                         elif 'elements' in var.keys():
                             rows = 'Stack:'
                             widgets_in_stack = var['elements']
                             for widget in widgets_in_stack:
                                 widget_identifier = widget['widgetIdentifier'] if widget[
                                     'elementType'] == 'widget' else widget['elementType']
-                                rows = rows + '<br>' + widget_identifier
+                                rows = rows + '<br>' + escape_text(widget_identifier)
                         else:
                             rows = ''
+                else:
+                    rows = escape_text(rows)
 
                 htmlstring = htmlstring + \
                     (f'<div style="{style}{grid_column}{grid_row}">{rows}</div>')
@@ -67,7 +70,7 @@ def get_iconsScreen(files_found, report_folder, seeker, wrap_text, timezone_offs
         htmlstring = (
             f'<table><tr> <td colspan="4"> Icons bottom bar</td></tr><tr>')
         for x in range(0, len(bbar)):
-            htmlstring = htmlstring + (f"<td width = 25%>{bbar[x]}</td>")
+            htmlstring = htmlstring + (f"<td width = 25%>{escape_text(bbar[x])}</td>")
         htmlstring = htmlstring + ("</tr></table>")
         data_list.append((htmlstring,))
 
@@ -78,7 +81,7 @@ def get_iconsScreen(files_found, report_folder, seeker, wrap_text, timezone_offs
         report.add_script()
         data_headers = ((f'Apps per Screens',))
         report.write_artifact_data_table(
-            data_headers, data_list, file_found, html_escape=False)
+            data_headers, data_list, file_found, html_no_escape=['Apps per Screens'])
         report.end_artifact_report()
 
 

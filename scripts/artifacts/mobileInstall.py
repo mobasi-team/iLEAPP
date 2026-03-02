@@ -623,7 +623,9 @@ def get_mobileInstall(files_found, report_folder, seeker, wrap_text, timezone_of
     report.add_script()
     data_headers = ('Bundle ID', 'Report Link')
     tsv_data_headers = ('Bundle ID', 'Report Link')
-    report.write_artifact_data_table(data_headers, data_list, location, html_escape=False)
+    report.write_artifact_data_table(
+        data_headers, data_list, location, html_no_escape=['Report Link']
+    )
     report.end_artifact_report()
 
     tsvname = 'Mobile Installation Logs - History'
@@ -718,7 +720,7 @@ def get_mobileInstall(files_found, report_folder, seeker, wrap_text, timezone_of
     report.start_artifact_report(report_folder, 'Strings - SQLite Journal', description)
     report.add_script()
     data_headers = ('Report', 'Location')
-    report.write_artifact_data_table(data_headers, data_list, location, html_escape=False)
+    report.write_artifact_data_table(data_headers, data_list, location, html_no_escape=['Report'])
     report.end_artifact_report()
 '''
 

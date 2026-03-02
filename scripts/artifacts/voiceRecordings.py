@@ -5,6 +5,7 @@ from os import listdir
 from os.path import isfile, join, basename, dirname
 
 from scripts.artifact_report import ArtifactHtmlReport
+from scripts.html_security import escape_attr, sanitize_url
 from scripts.ilapfuncs import logfunc, tsv, timeline
 
 
@@ -12,6 +13,16 @@ def unix_epoch_to_readable_date(unix_epoch_time):
     unix_time = float(unix_epoch_time + 978307200)
     readable_time = datetime.utcfromtimestamp(unix_time).strftime('%Y-%m-%d %H:%M:%S')
     return readable_time
+
+
+def _build_audio_file_html(audio_path):
+    safe_src = escape_attr(sanitize_url(audio_path))
+    return (
+        "<audio controls>"
+        f'<source src="{safe_src}" type="audio/wav">'
+        "<p>Your browser does not support HTML5 audio elements.</p>"
+        "</audio>"
+    )
 
 
 def get_voiceRecordings(files_found, report_folder, seeker, wrap_text, timezone_offset):
@@ -37,12 +48,7 @@ def get_voiceRecordings(files_found, report_folder, seeker, wrap_text, timezone_
                 pl = plistlib.load(file)
                 ct = unix_epoch_to_readable_date(pl['RCSavedRecordingCreationTime'])
 
-                audio = ''' 
-                            <audio controls>
-                                <source src={} type="audio/wav">
-                                <p>Your browser does not support HTML5 audio elements.</p>
-                            </audio> 
-                            '''.format(m4a_file)
+                audio = _build_audio_file_html(m4a_file)
 
                 data_list.append((ct, pl['RCSavedRecordingTitle'], pl['RCComposedAVURL'].split('//')[1], audio))
 

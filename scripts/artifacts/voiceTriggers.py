@@ -5,6 +5,7 @@ from os import listdir
 from os.path import isfile, join, basename, dirname
 
 from scripts.artifact_report import ArtifactHtmlReport
+from scripts.html_security import escape_attr, sanitize_url
 from scripts.ilapfuncs import logfunc, tsv, timeline
 
 
@@ -12,6 +13,16 @@ def format_time(date_time_str):
     date_time_obj = datetime.datetime.strptime(date_time_str, '%Y%m%d')
     formatted = '{}-{}-{}'.format(date_time_obj.year, date_time_obj.month, date_time_obj.day)
     return formatted
+
+
+def _build_audio_file_html(audio_path):
+    safe_src = escape_attr(sanitize_url(audio_path))
+    return (
+        "<audio controls>"
+        f'<source src="{safe_src}" type="audio/wav">'
+        "<p>Your browser does not support HTML5 audio elements.</p>"
+        "</audio>"
+    )
 
 
 def get_voiceTriggers(files_found, report_folder, seeker, wrap_text, timezone_offset):
@@ -37,12 +48,7 @@ def get_voiceTriggers(files_found, report_folder, seeker, wrap_text, timezone_of
                     else:
                         creation_date = ''
 
-                    audio = ''' 
-                            <audio controls>
-                                <source src={} type="audio/wav">
-                                <p>Your browser does not support HTML5 audio elements.</p>
-                            </audio> 
-                            '''.format(wav_file)
+                    audio = _build_audio_file_html(wav_file)
 
                     data_list.append((creation_date, fl['productType'], fl['utteranceWav'], audio))
 

@@ -70,7 +70,9 @@ def get_kikBplistmeta(files_found, report_folder, seeker, wrap_text, timezone_of
 		report.start_artifact_report(report_folder, 'Kik Media Metadata', description)
 		report.add_script()
 		data_headers = ('Content ID ', 'Filename', 'File Size', 'Allow Forward', 'Layout','App Name','App ID', 'SHA1 Original','SHA1 Scaled','Blockhash Scaled', 'Internal Thumbnail')
-		report.write_artifact_data_table(data_headers, data_list, head_tail[0],html_escape=False)
+		report.write_artifact_data_table(
+			data_headers, data_list, head_tail[0], html_no_escape=['Internal Thumbnail']
+		)
 		report.end_artifact_report()
 		
 		tsvname = 'Kik Attachments Bplist Metadata'

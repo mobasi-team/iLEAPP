@@ -2,6 +2,7 @@ import html
 import os
 import sys
 from scripts.html_parts import *
+from scripts.html_security import TrustedHtml, escape_text, sanitize_html_fragment
 #from scripts.ilapfuncs import is_platform_windows
 from scripts.version_info import ileapp_version
 
@@ -103,19 +104,32 @@ class ArtifactHtmlReport:
             '<tr>' + ''.join(('<th class="th-sm">{}</th>'.format(html.escape(str(x))) for x in data_headers)) + '</tr>')
         self.report_file.write('</thead><tbody>')
 
+        html_no_escape = html_no_escape or []
+
         if html_escape:
             for row in data_list:
                 if html_no_escape:
                     self.report_file.write('<tr>' + ''.join(('<td>{}</td>'.format(html.escape(
                         str(x) if x not in [None, 'N/A'] else '')) if h not in html_no_escape else '<td>{}</td>'.format(
-                        str(x) if x not in [None, 'N/A'] else '') for x, h in zip(row, data_headers))) + '</tr>')
+                        sanitize_html_fragment(str(x) if x not in [None, 'N/A'] else '')) for x, h in zip(row, data_headers))) + '</tr>')
                 else:
                     self.report_file.write('<tr>' + ''.join(
                         ('<td>{}</td>'.format(html.escape(str(x) if x not in [None, 'N/A'] else '')) for x in
                          row)) + '</tr>')
         else:
             for row in data_list:
-                self.report_file.write('<tr>' + ''.join( ('<td>{}</td>'.format(str(x) if x not in [None, 'N/A'] else '') for x in row) ) + '</tr>')
+                self.report_file.write(
+                    '<tr>'
+                    + ''.join(
+                        (
+                            '<td>{}</td>'.format(
+                                sanitize_html_fragment(str(x) if x not in [None, 'N/A'] else '')
+                            )
+                            for x in row
+                        )
+                    )
+                    + '</tr>'
+                )
         
         self.report_file.write('</tbody>')
         if cols_repeated_at_bottom:
@@ -140,10 +154,12 @@ class ArtifactHtmlReport:
             self.report_file.write(f'<h3 class="h3">{heading}</h3>')
 
     def write_lead_text(self, text):
-        self.report_file.write(f'<p class="lead">{text}</p>')
+        self.report_file.write(f'<p class="lead">{escape_text(text)}</p>')
 
     def write_raw_html(self, code):
-        self.report_file.write(code)
+        if not isinstance(code, TrustedHtml):
+            raise TypeError('write_raw_html requires TrustedHtml')
+        self.report_file.write(str(code))
 
     def end_artifact_report(self):
         if self.report_file:

@@ -32,6 +32,7 @@ import pandas as pd
 import shutil
 
 from scripts.artifact_report import ArtifactHtmlReport
+from scripts.html_security import trust_html
 from scripts.ilapfuncs import is_platform_windows, open_sqlite_db_readonly, sanitize_file_name, logfunc, convert_ts_human_to_timezone_offset
 from scripts.chat_rendering import render_chat, chat_HTML
 from scripts.ilapfuncs import artifact_processor, \
@@ -144,7 +145,7 @@ def sms(files_found, report_folder, seeker, wrap_text, timezone_offset):
     report.start_artifact_report(report_folder, 'SMS & iMessage - Messages (Threaded)')
     report.add_script()
     report.write_lead_text(f'SMS & iMessage Messages (Threaded) located at: {source_path}')
-    report.write_raw_html(chat_HTML)
+    report.write_raw_html(trust_html(chat_HTML))
     report.add_script(render_chat(sms_df))
     report.end_artifact_report()
 

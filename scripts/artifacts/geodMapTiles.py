@@ -174,7 +174,9 @@ def geodMapTiles(files_found, report_folder, seeker, wrap_text, timezone_offset)
         report.start_artifact_report(report_folder, 'Map Tile Cache', description)
         report.add_script()
         data_headers = ["Timestamp", "Places_from_VLOC", "Labels_in_tile", "Image", "Tileset", "Key A", "Key B", "Key C", "Key D"]#, "Size", "ETAG")
-        report.write_artifact_data_table(data_headers, data_list, file_found, html_escape = False)
+        report.write_artifact_data_table(
+            data_headers, data_list, file_found, html_no_escape=['Image']
+        )
         report.end_artifact_report()
 
     db.close()
